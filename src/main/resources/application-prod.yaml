@@ -1,0 +1,18 @@
+server:
+  port: 8080
+
+app:
+  name: "Task Manager Application"
+  version: "1.0.0"
+  description: "Production profile"
+  created-by: "Production Team"
+
+logging:
+  level:
+    com.mipt.hw: WARN
+    org.springframework.web: WARN
+    org.springframework: WARN
+  file:
+    name: logs/application.log
+    max-size: 10MB
+    max-history: 30

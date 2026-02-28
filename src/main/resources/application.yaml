@@ -1,0 +1,19 @@
+server:
+  port: 8080
+
+app:
+  name: "Task Manager Application"
+  version: "1.0.0"
+  description: "Homework"
+  created-by: "Tim"
+
+logging:
+  level:
+    com.mipt.hw: DEBUG
+
+spring:
+  application:
+    name: HW2ndSem
+
+  profiles:
+    active: dev
