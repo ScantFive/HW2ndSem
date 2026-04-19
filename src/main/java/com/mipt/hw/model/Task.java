@@ -1,6 +1,9 @@
 package com.mipt.hw.model;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 
 public class Task {
@@ -8,12 +11,21 @@ public class Task {
   private String title;
   private String description;
   private boolean completed;
+  private final LocalDateTime createdAt;
+  private LocalDate dueDate;
+  private Priority priority;
+  private Set<String> tags;
 
-  public Task(UUID id, String title, String description, boolean completed) {
+  public Task(UUID id, String title, String description, boolean completed, LocalDate dueDate, Priority priority, Set<String> tags) {
     this.id = id;
     this.title = title;
     this.description = description;
     this.completed = completed;
+    this.createdAt = LocalDateTime.now();
+    this.dueDate = dueDate;
+    this.priority = priority;
+    this.tags = tags;
+
   }
 
   public UUID getId() {
@@ -32,6 +44,18 @@ public class Task {
     return completed;
   }
 
+  public LocalDateTime getCreatedAt() { return createdAt; }
+
+  public LocalDate getDueDate() { return dueDate; }
+
+  public Priority getPriority() {
+    return priority;
+  }
+
+  public Set<String> getTags() {
+    return tags;
+  }
+
   public void setId(UUID id) {
     this.id = id;
   }
@@ -44,8 +68,18 @@ public class Task {
     this.description = description;
   }
 
-  public void setCompleted(Boolean completed) {
+  public void setCompleted(boolean completed) {
     this.completed = completed;
+  }
+
+  public void setDueDate(LocalDate dueDate) { this.dueDate = dueDate; }
+
+  public void setPriority(Priority priority) {
+    this.priority = priority;
+  }
+
+  public void setTags(Set<String> tags) {
+    this.tags = tags;
   }
 
   @Override
@@ -69,4 +103,5 @@ public class Task {
   public int hashCode() {
     return Objects.hash(id, title, description, completed);
   }
+
 }
