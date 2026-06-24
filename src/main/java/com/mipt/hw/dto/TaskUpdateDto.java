@@ -2,12 +2,14 @@ package com.mipt.hw.dto;
 
 import com.mipt.hw.model.Priority;
 import com.mipt.hw.valid.OnUpdate;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.FutureOrPresent;
 import jakarta.validation.constraints.Size;
 
 import java.time.LocalDate;
 import java.util.Set;
 
+@Schema(description = "DTO для обновления задачи")
 public class TaskUpdateDto {
 
   public String getTitle() { return title; }
@@ -23,19 +25,25 @@ public class TaskUpdateDto {
   public Set<String> getTags() { return tags; }
   public void setTags(Set<String> tags) { this.tags = tags; }
 
+  @Schema(description = "Заголовок задачи", example = "Updated homework title")
   @Size(min = 3, max = 100, message = "Title must be between 3 and 100 characters", groups = OnUpdate.class)
   private String title;
 
+  @Schema(description = "Описание задачи", example = "Updated description")
   @Size(max = 500, message = "Description cannot exceed 500 characters", groups = OnUpdate.class)
   private String description;
 
+  @Schema(description = "Статус выполнения", example = "true")
   private Boolean completed;
 
+  @Schema(description = "Дата выполнения", example = "2026-12-31")
   @FutureOrPresent(message = "Due date must be in the present or future", groups = OnUpdate.class)
   private LocalDate dueDate;
 
+  @Schema(description = "Приоритет задачи", example = "HIGH", allowableValues = {"LOW", "MEDIUM", "HIGH"})
   private Priority priority;
 
+  @Schema(description = "Теги задачи", example = "[\"urgent\", \"important\", \"updated\"]")
   @Size(max = 5, message = "Maximum 5 tags allowed", groups = OnUpdate.class)
   private Set<String> tags;
 

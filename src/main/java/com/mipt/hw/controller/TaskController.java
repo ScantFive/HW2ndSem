@@ -10,6 +10,13 @@ import com.mipt.hw.service.TaskService;
 import com.mipt.hw.valid.OnCreate;
 import com.mipt.hw.valid.OnUpdate;
 import com.mipt.hw.valid.TaskUpdateContext;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Validator;
 import org.springframework.beans.factory.annotation.Value;
@@ -26,6 +33,7 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/tasks")
+@Tag(name = "Task Controller", description = "Управление задачами (CRUD операции)")
 public class TaskController {
 
   private final TaskService taskService;
@@ -44,6 +52,11 @@ public class TaskController {
     this.favoritesService = favoritesService;
   }
 
+  @Operation(summary = "Получить все задачи", description = "Возвращает список всех задач с общим количеством")
+  @ApiResponses(value = {
+    @ApiResponse(responseCode = "200", description = "Успешное получение списка задач",
+      content = @Content(mediaType = "application/json", schema = @Schema(implementation = TaskResponseDto.class)))
+  })
   @GetMapping
   public ResponseEntity<List<TaskResponseDto>> getAllTasks() {
     List<TaskResponseDto> tasks = taskService.getAllTasks().stream()
@@ -58,8 +71,16 @@ public class TaskController {
       .body(tasks);
   }
 
+  @Operation(summary = "Получить задачу по ID", description = "Возвращает задачу с указанным идентификатором")
+  @ApiResponses(value = {
+    @ApiResponse(responseCode = "200", description = "Успешное получение задачи",
+      content = @Content(mediaType = "application/json", schema = @Schema(implementation = TaskResponseDto.class))),
+    @ApiResponse(responseCode = "404", description = "Задача не найдена")
+  })
   @GetMapping("/{id}")
-  public ResponseEntity<TaskResponseDto> getTaskById(@PathVariable UUID id) {
+  public ResponseEntity<TaskResponseDto> getTaskById(
+    @Parameter(description = "ID задачи", required = true, example = "123e4567-e89b-12d3-a456-426614174000")
+    @PathVariable UUID id) {
     Task task = taskService.getTask(id);
     TaskResponseDto responseDto = taskMapper.toResponseDto(task);
 
@@ -68,8 +89,13 @@ public class TaskController {
       .body(responseDto);
   }
 
+  @Operation(summary = "Проверить статус избранного", description = "Проверяет, добавлена ли задача в избранное")
+  @ApiResponses(value = {
+    @ApiResponse(responseCode = "200", description = "Успешная проверка статуса")
+  })
   @GetMapping("/{id}/favorite-status")
   public ResponseEntity<Map<String, Boolean>> checkFavoriteStatus(
+    @Parameter(description = "ID задачи", required = true, example = "123e4567-e89b-12d3-a456-426614174000")
     @PathVariable UUID id,
     HttpSession session) {
     boolean isFavorite = favoritesService.isFavorite(id, session);
@@ -81,8 +107,15 @@ public class TaskController {
       .body(response);
   }
 
+  @Operation(summary = "Создать новую задачу", description = "Создает задачу с переданными данными")
+  @ApiResponses(value = {
+    @ApiResponse(responseCode = "201", description = "Задача успешно создана",
+      content = @Content(mediaType = "application/json", schema = @Schema(implementation = TaskResponseDto.class))),
+    @ApiResponse(responseCode = "400", description = "Некорректные данные")
+  })
   @PostMapping
   public ResponseEntity<TaskResponseDto> createTask(
+    @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Данные для создания задачи", required = true)
     @Validated(OnCreate.class) @RequestBody TaskCreateDto createDto) {
     Task task = taskMapper.toEntity(createDto);
     Task createdTask = taskService.createTask(task);
@@ -93,9 +126,18 @@ public class TaskController {
       .body(responseDto);
   }
 
+  @Operation(summary = "Обновить задачу", description = "Обновляет задачу с указанным ID")
+  @ApiResponses(value = {
+    @ApiResponse(responseCode = "200", description = "Задача успешно обновлена",
+      content = @Content(mediaType = "application/json", schema = @Schema(implementation = TaskResponseDto.class))),
+    @ApiResponse(responseCode = "400", description = "Некорректные данные"),
+    @ApiResponse(responseCode = "404", description = "Задача не найдена")
+  })
   @PutMapping("/{id}")
   public ResponseEntity<TaskResponseDto> updateTask(
+    @Parameter(description = "ID задачи", required = true, example = "123e4567-e89b-12d3-a456-426614174000")
     @PathVariable UUID id,
+    @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Данные для обновления задачи", required = true)
     @Validated(OnUpdate.class) @RequestBody TaskUpdateDto updateDto) {
     if (updateDto.getDueDate() != null) {
       TaskUpdateContext context = new TaskUpdateContext(id, updateDto.getDueDate(), taskService);
@@ -113,8 +155,15 @@ public class TaskController {
       .body(responseDto);
   }
 
+  @Operation(summary = "Удалить задачу", description = "Удаляет задачу с указанным ID")
+  @ApiResponses(value = {
+    @ApiResponse(responseCode = "204", description = "Задача успешно удалена"),
+    @ApiResponse(responseCode = "404", description = "Задача не найдена")
+  })
   @DeleteMapping("/{id}")
-  public ResponseEntity<Void> deleteTask(@PathVariable UUID id) {
+  public ResponseEntity<Void> deleteTask(
+    @Parameter(description = "ID задачи", required = true, example = "123e4567-e89b-12d3-a456-426614174000")
+    @PathVariable UUID id) {
     taskService.deleteTask(id);
 
     return ResponseEntity.noContent()
