@@ -1,6 +1,7 @@
 package com.mipt.hw.service;
 
 import com.mipt.hw.exception.AttachmentNotFoundException;
+import com.mipt.hw.model.Task;
 import com.mipt.hw.model.TaskAttachment;
 import com.mipt.hw.repository.TaskAttachmentRepository;
 import org.springframework.beans.factory.annotation.Value;
@@ -46,7 +47,7 @@ public class AttachmentService {
   }
 
   public TaskAttachment storeAttachment(UUID taskId, MultipartFile file) throws IOException {
-    taskService.getTask(taskId);
+    Task task = taskService.getTask(taskId);
 
     String originalFileName = file.getOriginalFilename();
     String storedFileName = UUID.randomUUID().toString();
@@ -62,7 +63,7 @@ public class AttachmentService {
     }
 
     TaskAttachment attachment = new TaskAttachment();
-    attachment.setTaskId(taskId);
+    attachment.setTask(task);
     attachment.setFileName(originalFileName != null ? originalFileName : "unknown");
     attachment.setStoredFileName(storedFileName);
     attachment.setContentType(file.getContentType());

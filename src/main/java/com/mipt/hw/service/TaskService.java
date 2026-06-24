@@ -12,16 +12,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Service
+@Transactional
 public class TaskService {
 
   private final TaskRepository taskRepository;
   private final TaskMapper taskMapper;
-  private static Logger log = LoggerFactory.getLogger(TaskService.class);
+  private static final Logger log = LoggerFactory.getLogger(TaskService.class);
   private final Map<UUID, Task> taskCache = new ConcurrentHashMap<>();
 
   @Value("${app.name}")
@@ -37,49 +39,68 @@ public class TaskService {
 
   @PostConstruct
   public void init() {
+    log.info("Initializing TaskService with app: {}, version: {}", appName, appVersion);
+    refreshCache();
+  }
+
+  private void refreshCache() {
+    taskCache.clear();
     for (Task task : taskRepository.findAll()) {
       taskCache.put(task.getId(), task);
     }
+    log.info("Cache refreshed with {} tasks", taskCache.size());
   }
 
   @PreDestroy
   public void destroy() {
     try {
       long taskCount = getTaskCount();
-      System.out.println("Завершение работы с " + taskCount + " задачами в памяти");
+      log.info("Shutting down TaskService with {} tasks in cache", taskCount);
     } catch (Exception e) {
-      System.err.println("Ошибка при завершении: " + e.getMessage());
+      log.error("Error during shutdown: {}", e.getMessage());
     }
   }
 
+  @Transactional
   public Task createTask(Task task) {
     if (task.getTitle() == null || task.getTitle().trim().isEmpty()) {
       throw new IllegalArgumentException("Title cannot be empty");
     }
-    taskRepository.save(task);
-    taskCache.put(task.getId(), task);
-    return task;
+
+    Task savedTask = taskRepository.save(task);
+    taskCache.put(savedTask.getId(), savedTask);
+
+    log.info("Created task: id={}, title={}", savedTask.getId(), savedTask.getTitle());
+    return savedTask;
   }
 
+  @Transactional
   public Task createTask(String title, String description) {
     if (title == null || title.trim().isEmpty()) {
       throw new IllegalArgumentException("Title cannot be empty");
     }
-    Task task = new Task(null, title, description, false, null, null, null);
-    taskRepository.save(task);
-    taskCache.put(task.getId(), task);
-    return task;
+    Task task = new Task();
+    task.setTitle(title);
+    task.setDescription(description);
+    task.setCompleted(false);
+    task.setPriority(Priority.MEDIUM);
+
+    return createTask(task);
   }
 
   public Optional<Task> getTaskOpt(UUID id) {
     if (id == null) {
       throw new IllegalArgumentException("ID cannot be null");
     }
-    return taskRepository.find(id);
+    Task cached = taskCache.get(id);
+    if (cached != null) {
+      return Optional.of(cached);
+    }
+    return taskRepository.findById(id);
   }
 
   public Task getTask(UUID id) {
-    return taskRepository.find(id)
+    return getTaskOpt(id)
       .orElseThrow(() -> new TaskNotFoundException("Task not found with id: " + id));
   }
 
@@ -87,16 +108,22 @@ public class TaskService {
     return taskRepository.findAll();
   }
 
+  @Transactional
   public Task updateTask(UUID id, TaskUpdateDto updateDto) {
     Task existingTask = getTask(id);
     taskMapper.updateEntity(updateDto, existingTask);
-    Task updatedTask = taskRepository.update(existingTask);
+
+    Task updatedTask = taskRepository.save(existingTask);
     taskCache.put(id, updatedTask);
+
+    log.info("Updated task: id={}, title={}", updatedTask.getId(), updatedTask.getTitle());
     return updatedTask;
   }
 
+  @Transactional
   public Task updateTask(UUID id, Task updatedTask) {
     Task existingTask = getTask(id);
+
     existingTask.setTitle(updatedTask.getTitle());
     existingTask.setDescription(updatedTask.getDescription());
     existingTask.setCompleted(updatedTask.getCompleted());
@@ -104,11 +131,13 @@ public class TaskService {
     existingTask.setPriority(updatedTask.getPriority());
     existingTask.setTags(updatedTask.getTags());
 
-    Task savedTask = taskRepository.update(existingTask);
+    Task savedTask = taskRepository.save(existingTask);
     taskCache.put(id, savedTask);
+
     return savedTask;
   }
 
+  @Transactional
   public Task updateTaskManual(UUID id, String title, String description,
                                Boolean completed, Priority priority) {
     Task existingTask = getTask(id);
@@ -126,29 +155,39 @@ public class TaskService {
       existingTask.setPriority(priority);
     }
 
-    Task updatedTask = taskRepository.update(existingTask);
-    taskCache.put(id, updatedTask);
-    return updatedTask;
+    Task savedTask = taskRepository.save(existingTask);
+    taskCache.put(id, savedTask);
+
+    return savedTask;
   }
 
+  @Transactional
   public Task toggleTaskStatus(UUID id) {
     Task task = getTask(id);
     task.setCompleted(!task.getCompleted());
-    Task updatedTask = taskRepository.update(task);
+
+    Task updatedTask = taskRepository.save(task);
     taskCache.put(id, updatedTask);
+
     return updatedTask;
   }
 
+  @Transactional
   public void deleteTask(UUID id) {
     if (!taskRepository.existsById(id)) {
-      throw new RuntimeException("Task not found with id: " + id);
+      throw new TaskNotFoundException("Task not found with id: " + id);
     }
-    taskRepository.delete(id);
+    taskRepository.deleteById(id);
     taskCache.remove(id);
+
+    log.info("Deleted task: id={}", id);
   }
 
+  @Transactional
   public void deleteTasks(List<UUID> ids) {
-    ids.forEach(this::deleteTask);
+    for (UUID id : ids) {
+      deleteTask(id);
+    }
   }
 
   public boolean taskExists(UUID id) {
@@ -156,7 +195,7 @@ public class TaskService {
   }
 
   public long getTaskCount() {
-    return taskRepository.findAll().size();
+    return taskRepository.count();
   }
 
   public List<Task> getTasksByStatus(boolean completed) {
@@ -167,13 +206,5 @@ public class TaskService {
 
   public Map<UUID, Task> getTaskCache() {
     return taskCache;
-  }
-
-  public static Logger getLog() {
-    return log;
-  }
-
-  public static void setLog(Logger log) {
-    TaskService.log = log;
   }
 }

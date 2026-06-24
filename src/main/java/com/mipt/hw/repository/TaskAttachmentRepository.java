@@ -1,41 +1,24 @@
 package com.mipt.hw.repository;
 
 import com.mipt.hw.model.TaskAttachment;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.stream.Collectors;
+import java.util.List;
+import java.util.UUID;
 
 @Repository
-public class TaskAttachmentRepository {
-  private final Map<Long, TaskAttachment> attachments = new ConcurrentHashMap<>();
-  private final AtomicLong idGenerator = new AtomicLong(1);
+public interface TaskAttachmentRepository extends JpaRepository<TaskAttachment, Long> {
 
-  public TaskAttachment save(TaskAttachment attachment) {
-    if (attachment.getId() == null) {
-      attachment.setId(idGenerator.getAndIncrement());
-    }
-    attachments.put(attachment.getId(), attachment);
-    return attachment;
-  }
+  List<TaskAttachment> findByTaskId(UUID taskId);
 
-  public Optional<TaskAttachment> findById(Long id) {
-    return Optional.ofNullable(attachments.get(id));
-  }
+  @Modifying
+  @Query("DELETE FROM TaskAttachment a WHERE a.task.id = :taskId")
+  void deleteByTaskId(@Param("taskId") UUID taskId);
 
-  public List<TaskAttachment> findByTaskId(UUID taskId) {
-    return attachments.values().stream()
-      .filter(attachment -> attachment.getTaskId().equals(taskId))
-      .collect(Collectors.toList());
-  }
-
-  public void deleteById(Long id) {
-    attachments.remove(id);
-  }
-
-  public List<TaskAttachment> findAll() {
-    return new ArrayList<>(attachments.values());
-  }
+  @Query("SELECT a FROM TaskAttachment a JOIN FETCH a.task WHERE a.id = :id")
+  TaskAttachment findByIdWithTask(@Param("id") Long id);
 }
