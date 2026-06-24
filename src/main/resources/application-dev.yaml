@@ -1,0 +1,28 @@
+server:
+  port: 8081
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/todolist_db
+    username: todolist_user
+    password: todolist_pass
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+  flyway:
+    enabled: true
+
+app:
+  name: "Task Manager Application (DEV)"
+  version: "1.0.0-dev"
+
+logging:
+  level:
+    com.mipt.hw: DEBUG
+    org.springframework.web: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.flywaydb: DEBUG
