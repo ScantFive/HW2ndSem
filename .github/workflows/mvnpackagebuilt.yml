@@ -23,32 +23,21 @@ env:
 
 jobs:
   build:
-    name: Build Application
     runs-on: ubuntu-latest
-    
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v3
         with:
           java-version: '21'
           distribution: 'temurin'
           cache: maven
 
-      - name: Build with Maven
-        run: |
-          chmod +x mvnw
-          ./mvnw clean compile
-          ./mvnw package -DskipTests
-
-      - name: Upload JAR artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: application-jar
-          path: target/*.jar
-          retention-days: 1
+      - name: Run mvn package
+        run:
+          mvn package
 
   test:
     name: Run Tests
