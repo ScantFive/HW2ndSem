@@ -204,6 +204,28 @@ public class TaskService {
       .toList();
   }
 
+  @Transactional(rollbackFor = Exception.class)
+  public void bulkCompleteTasks(List<UUID> ids) {
+    if (ids == null || ids.isEmpty()) {
+      throw new IllegalArgumentException("Task IDs list cannot be empty");
+    }
+
+    List<Task> tasksToUpdate = new ArrayList<>();
+    for (UUID id : ids) {
+      Task task = taskRepository.findById(id)
+        .orElseThrow(() -> new TaskNotFoundException("Task not found: " + id));
+      tasksToUpdate.add(task);
+    }
+
+    for (Task task : tasksToUpdate) {
+      task.setCompleted(true);
+    }
+
+    taskRepository.saveAll(tasksToUpdate);
+
+    tasksToUpdate.forEach(task -> taskCache.put(task.getId(), task));
+  }
+
   public Map<UUID, Task> getTaskCache() {
     return taskCache;
   }
